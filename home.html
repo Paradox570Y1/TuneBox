@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TuneBox - Home</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="home.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <script src="home.js" defer></script>
+</head>
+
+<body>
+    <div class="home-container">
+        <!-- Header -->
+        <header class="home-header">
+            <div class="header-content">
+                <div class="logo-section">
+                    <img src="./assets/LOGO.png" alt="TuneBox Logo" class="header-logo">
+                    <h1>TuneBox</h1>
+                </div>
+                <nav class="nav-section">
+                    <button class="nav-btn active" id="homeBtn">
+                        <i class="fas fa-home"></i> Home
+                    </button>
+                    <a href="index.html" class="nav-btn">
+                        <i class="fas fa-play"></i> Player
+                    </a>
+                </nav>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="home-main">
+            <!-- Playlists Section -->
+            <section class="playlists-section">
+                <div class="section-header">
+                    <h2><i class="fas fa-list-music"></i> My Playlists</h2>
+                    <div class="section-controls">
+                        <span class="playlist-count" id="totalPlaylists">0 playlists</span>
+                    </div>
+                </div>
+                <div class="playlists-grid" id="playlistsGrid">
+                    <!-- Playlists will be loaded here -->
+                    <div class="add-playlist-card">
+                        <div class="add-icon">
+                            <i class="fas fa-plus"></i>
+                        </div>
+                        <span class="add-text">Create Playlist</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- All Songs Section -->
+            <section class="songs-section">
+                <div class="section-header">
+                    <h2><i class="fas fa-music"></i> All Songs</h2>
+                    <div class="section-controls">
+                        <button class="control-btn" id="playAllBtn">
+                            <i class="fas fa-play"></i> Play All
+                        </button>
+                        <button class="control-btn" id="shuffleAllBtn">
+                            <i class="fas fa-random"></i> Shuffle
+                        </button>
+                        <span class="song-count" id="totalSongs">0 songs</span>
+                    </div>
+                </div>
+                <div class="songs-grid" id="allSongsGrid">
+                    <!-- Songs will be loaded here -->
+                    <div class="add-song-card">
+                        <div class="add-icon">
+                            <i class="fas fa-plus"></i>
+                        </div>
+                        <span class="add-text">Add Song</span>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Modals -->
+    
+    <!-- Create Playlist Modal -->
+    <div class="modal" id="createPlaylistModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-list"></i> Create New Playlist</h3>
+                <button class="close-btn" id="closeCreateModal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="playlistName">Playlist Name</label>
+                    <input type="text" id="playlistName" placeholder="Enter playlist name..." maxlength="50">
+                </div>
+                <div class="form-group">
+                    <label for="playlistDescription">Description (Optional)</label>
+                    <textarea id="playlistDescription" placeholder="Describe your playlist..." maxlength="200"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn cancel" id="cancelCreateBtn">Cancel</button>
+                <button class="btn primary" id="confirmCreateBtn">Create Playlist</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Songs to Playlist Modal -->
+    <div class="modal" id="addSongsModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-plus"></i> Add Songs to Playlist</h3>
+                <button class="close-btn" id="closeAddSongsModal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="available-songs" id="availableSongs">
+                    <!-- Available songs will be loaded here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn cancel" id="cancelAddSongsBtn">Cancel</button>
+                <button class="btn primary" id="confirmAddSongsBtn">Add Selected</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Playlist Details Modal -->
+    <div class="modal" id="playlistDetailsModal">
+        <div class="modal-content large">
+            <div class="modal-header">
+                <h3 id="playlistDetailsTitle"><i class="fas fa-list"></i> Playlist Details</h3>
+                <button class="close-btn" id="closeDetailsModal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="playlist-info">
+                    <div class="playlist-meta">
+                        <h4 id="detailsPlaylistName">Playlist Name</h4>
+                        <p id="detailsPlaylistDescription">Description</p>
+                        <span class="playlist-stats" id="detailsPlaylistStats">0 songs</span>
+                    </div>
+                    <div class="playlist-actions">
+                        <button class="btn primary" id="playPlaylistBtn">
+                            <i class="fas fa-play"></i> Play Playlist
+                        </button>
+                        <button class="btn secondary" id="addSongsToPlaylistBtn">
+                            <i class="fas fa-plus"></i> Add Songs
+                        </button>
+                        <button class="btn danger" id="deletePlaylistBtn">
+                            <i class="fas fa-trash"></i> Delete Playlist
+                        </button>
+                    </div>
+                </div>
+                <div class="playlist-songs" id="playlistSongsContainer">
+                    <!-- Playlist songs will be loaded here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden file input for adding songs -->
+    <input type="file" id="audioUpload" accept="audio/*" multiple style="display: none;">
+
+    <!-- Mini Player (shows when song is playing) -->
+    <div class="mini-player" id="miniPlayer" style="display: none;">
+        <div class="mini-player-content">
+            <div class="mini-track-info">
+                <img src="./assets/LOGO.png" alt="Album Art" class="mini-album-art">
+                <div class="mini-text">
+                    <span class="mini-title" id="miniTitle">No song playing</span>
+                    <span class="mini-duration" id="miniDuration">0:00</span>
+                </div>
+            </div>
+            <div class="mini-controls">
+                <button class="mini-btn" id="miniPrevBtn">
+                    <i class="fas fa-backward-step"></i>
+                </button>
+                <button class="mini-btn primary" id="miniPlayPauseBtn">
+                    <i class="fas fa-play"></i>
+                </button>
+                <button class="mini-btn" id="miniNextBtn">
+                    <i class="fas fa-forward-step"></i>
+                </button>
+                <button class="mini-btn" id="openPlayerBtn">
+                    <i class="fas fa-expand"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Playlist Selection Modal -->
+    <div id="playlistSelectionModal" class="playlist-selection-modal">
+        <div class="playlist-selection-content">
+            <div class="playlist-selection-header">
+                <h3>Add Song to Playlists</h3>
+                <button class="playlist-selection-close" onclick="closePlaylistSelection()">×</button>
+            </div>
+            <div class="playlist-selection-list" id="playlistSelectionList">
+                <!-- Playlist options will be dynamically added here -->
+            </div>
+            <div class="playlist-selection-actions">
+                <button class="playlist-selection-btn cancel" onclick="closePlaylistSelection()">Cancel</button>
+                <button class="playlist-selection-btn add" onclick="addSongToSelectedPlaylists()">Add to Playlists</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden file input for song upload -->
+    <input type="file" id="audioUpload" accept="audio/*" multiple style="display: none;">
+
+    <script src="home.js"></script>
+</body>
+
+</html>

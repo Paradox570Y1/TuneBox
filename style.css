@@ -11,11 +11,53 @@ body {
     background-color: #121212;
     color: #fff;
     display: flex;
+    flex-direction: column;
     justify-content: center;
     align-items: center;
     min-height: 100vh;
     padding: 10px;
     box-sizing: border-box;
+}
+
+/* Navigation Header */
+.nav-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: linear-gradient(135deg, #4A90E2, #5AADF2); /* Blue Gradient */
+    padding: 1rem 2rem;
+    border-radius: 12px;
+    margin-bottom: 1rem;
+    width: 90%;
+    max-width: 900px;
+    box-shadow: 0 4px 15px rgba(74, 144, 226, 0.3); /* Blue Shadow */
+}
+
+.nav-btn {
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: white;
+    padding: 0.75rem 1.5rem;
+    border-radius: 25px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+}
+
+.nav-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: translateY(-2px);
+}
+
+.nav-header h1 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.nav-spacer {
+    width: 120px; /* Same width as nav-btn to center the title */
 }
 
 .container {
@@ -97,7 +139,7 @@ input[type="range"]::-webkit-slider-thumb {
     appearance: none;
     width: 16px;
     height: 16px;
-    background: #1DB954;
+    background: #4A90E2; /* Blue Thumb */
     border-radius: 50%;
     transition: background 0.2s;
 }
@@ -123,8 +165,8 @@ input[type="range"]::-webkit-slider-thumb {
 }
 
 .play-btn {
-    background-color: #1DB954;
-    color: #121212;
+    background-color: #4A90E2; /* Blue Background */
+    color: #fff;
     width: 60px;
     height: 60px;
     border-radius: 50%;
@@ -136,9 +178,9 @@ input[type="range"]::-webkit-slider-thumb {
 }
 
 .play-btn:hover {
-    background-color: #1fdf64;
+    background-color: #5AADF2; /* Lighter Blue */
     transform: scale(1.1);
-    color: #121212;
+    color: #fff;
 }
 
 
@@ -191,7 +233,7 @@ input[type="range"]::-webkit-slider-thumb {
     appearance: none;
     width: 16px;
     height: 16px;
-    background: #1DB954;
+    background: #4A90E2; /* Blue Thumb */
     border-radius: 50%;
     transition: background 0.2s;
 }
@@ -235,7 +277,7 @@ input[type="range"]::-webkit-slider-thumb {
 
 .playlist-item:hover { background-color: #282828; }
 .playlist-item.active { background-color: #2a2a2a; }
-.playlist-item.active .song-title { color: #1DB954; }
+.playlist-item.active .song-title { color: #4A90E2; } /* Blue Text */
 .playlist-item .song-title { font-weight: 600; }
 .playlist-item .song-info { font-size: 12px; color: #b3b3b3; }
 
@@ -243,7 +285,7 @@ input[type="range"]::-webkit-slider-thumb {
 #addSongBtn {
   width: 100%;
   padding: 10px;
-  background: #4CAF50;
+  background: #4A90E2; /* Blue Background */
   color: white;
   border: none;
   border-radius: 8px;
@@ -253,7 +295,7 @@ input[type="range"]::-webkit-slider-thumb {
 }
 
 #addSongBtn:hover {
-  background: #3a963fff;
+  background: #3F80D0; /* Darker Blue */
 }
 
 
@@ -262,6 +304,20 @@ input[type="range"]::-webkit-slider-thumb {
     body {
         align-items: flex-start;
         padding: 5px;
+    }
+    
+    .nav-header {
+        width: 100%;
+        padding: 0.75rem 1rem;
+    }
+    
+    .nav-header h1 {
+        font-size: 1.2rem;
+    }
+    
+    .nav-btn {
+        padding: 0.5rem 1rem;
+        font-size: 0.9rem;
     }
     
     .container {
@@ -351,6 +407,27 @@ input[type="range"]::-webkit-slider-thumb {
     body {
         align-items: flex-start;
         padding: 5px;
+    }
+    
+    .nav-header {
+        width: 100%;
+        padding: 0.5rem;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .nav-header h1 {
+        font-size: 1.1rem;
+        order: -1;
+    }
+    
+    .nav-btn {
+        padding: 0.5rem 1rem;
+        font-size: 0.85rem;
+    }
+    
+    .nav-spacer {
+        display: none;
     }
     
     .container {
