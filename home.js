@@ -16,37 +16,212 @@ function initDatabase() {
     loadPlaylists();
 }
 
-// Add song function
-function addSong() {
-    const fileInput = document.getElementById('audioUpload');
-    fileInput.click();
+// Constructor function for Song Card
+function SongCard(song) {
+    this.song = song;
+    this.element = null;
     
-    fileInput.onchange = function(e) {
-        const files = e.target.files;
-        for (let file of files) {
-            if (file.type.startsWith('audio/')) {
-                // Convert file to blob for storage
-                const reader = new FileReader();
-                reader.readAsArrayBuffer(file);
-                
-                reader.onload = function() {
-                    const audioBlob = new Blob([reader.result], { type: file.type });
-                    
-                    const song = {
-                        id: Date.now() + Math.random(), // Unique ID
-                        title: file.name.replace(/\.[^/.]+$/, ""), // Remove file extension
-                        audioBlob: audioBlob,
-                        duration: 0, // Will be calculated when played
-                        dateAdded: new Date().toISOString()
-                    };
-                    
-                    songs.push(song);
-                    saveSongs();
-                    renderSongs();
-                };
-            }
+    // Create the song card element
+    this.create = function() {
+        const songCard = document.createElement('div');
+        songCard.className = 'song-card';
+        songCard.onclick = () => this.play();
+        
+        songCard.innerHTML = `
+            <div class="song-album-art">
+                <div class="default-album-art">
+                    <i class="fas fa-music"></i>
+                </div>
+            </div>
+            <div class="song-info-section">
+                <div class="song-title">${this.song.title}</div>
+                <button class="song-menu" onclick="event.stopPropagation();">
+                    <i class="fas fa-ellipsis-v"></i>
+                </button>
+            </div>
+        `;
+        
+        // Add menu event listener
+        const menuBtn = songCard.querySelector('.song-menu');
+        menuBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.showMenu(menuBtn);
+        });
+        
+        this.element = songCard;
+        return this.element;
+    };
+    
+    // Play the song
+    this.play = function() {
+        const audioURL = URL.createObjectURL(this.song.audioBlob);
+        sessionStorage.setItem('currentSong', JSON.stringify({
+            title: this.song.title,
+            audioURL: audioURL,
+            id: this.song.id
+        }));
+        window.location.href = 'index.html';
+    };
+    
+    // Show context menu
+    this.showMenu = function(menuElement) {
+        // Create menu if it doesn't exist
+        let menu = menuElement.querySelector('.song-menu-tooltip');
+        if (!menu) {
+            menu = document.createElement('div');
+            menu.className = 'song-menu-tooltip';
+            menu.innerHTML = `
+                <div class="song-menu-option" data-action="playlist">
+                    <i class="fas fa-plus"></i> Add to Playlist
+                </div>
+                <div class="song-menu-option" data-action="delete">
+                    <i class="fas fa-trash"></i> Delete
+                </div>
+            `;
+            menuElement.appendChild(menu);
+            
+            // Add event listeners to menu options
+            menu.querySelectorAll('.song-menu-option').forEach(option => {
+                option.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const action = option.dataset.action;
+                    if (action === 'playlist') {
+                        this.addToPlaylist();
+                    } else if (action === 'delete') {
+                        this.delete();
+                    }
+                    menu.classList.remove('active');
+                });
+            });
         }
-        fileInput.value = ''; // Reset file input
+        
+        // Close all other menus
+        document.querySelectorAll('.song-menu-tooltip.active').forEach(tooltip => {
+            if (tooltip !== menu) {
+                tooltip.classList.remove('active');
+            }
+        });
+        
+        // Toggle menu
+        menu.classList.toggle('active');
+        
+        // Close menu when clicking outside
+        setTimeout(() => {
+            const closeMenu = (e) => {
+                if (!menuElement.contains(e.target)) {
+                    menu.classList.remove('active');
+                    document.removeEventListener('click', closeMenu);
+                }
+            };
+            document.addEventListener('click', closeMenu);
+        }, 0);
+    };
+    
+    // Add to playlist
+    this.addToPlaylist = function() {
+        currentSongForPlaylistSelection = this.song.id;
+        showPlaylistSelection();
+    };
+    
+    // Delete the song
+    this.delete = function() {
+        Swal.fire({
+            title: 'Delete Song?',
+            text: "You won't be able to revert this!",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#f44336',
+            cancelButtonColor: '#666',
+            confirmButtonText: 'Yes, delete it!',
+            cancelButtonText: 'Cancel',
+            background: '#1e1e1e',
+            color: '#fff',
+            customClass: {
+                popup: 'swal-dark-popup',
+                confirmButton: 'swal-confirm-btn',
+                cancelButton: 'swal-cancel-btn'
+            }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                songs = songs.filter(s => s.id !== this.song.id);
+                saveSongs();
+                renderSongs();
+                
+                // Also remove from all playlists
+                playlists.forEach(playlist => {
+                    playlist.songs = playlist.songs.filter(id => id !== this.song.id);
+                });
+                savePlaylists();
+                renderPlaylists();
+                
+                // Success message
+                Swal.fire({
+                    title: 'Deleted!',
+                    text: 'Your song has been deleted.',
+                    icon: 'success',
+                    timer: 2000,
+                    showConfirmButton: false,
+                    background: '#1e1e1e',
+                    color: '#fff',
+                    customClass: {
+                        popup: 'swal-dark-popup'
+                    }
+                });
+            }
+        });
+    };
+}
+
+// Constructor function for Add Song Card
+function AddSongCard() {
+    this.element = null;
+    
+    this.create = function() {
+        const addCard = document.createElement('div');
+        addCard.className = 'add-song-card';
+        addCard.onclick = () => this.addSong();
+        
+        addCard.innerHTML = `
+            <div class="add-icon">
+                <i class="fas fa-plus"></i>
+            </div>
+            <span class="add-text">Add Song</span>
+        `;
+        
+        this.element = addCard;
+        return this.element;
+    };
+    
+    this.addSong = function() {
+        const fileInput = document.getElementById('audioUpload');
+        fileInput.click();
+        
+        fileInput.onchange = function(e) {
+            const files = e.target.files;
+            for (let file of files) {
+                if (file.type.startsWith('audio/')) {
+                    const reader = new FileReader();
+                    reader.readAsArrayBuffer(file);
+                    
+                    reader.onload = function() {
+                        const audioBlob = new Blob([reader.result], { type: file.type });
+                        
+                        const song = {
+                            id: Date.now() + Math.random(),
+                            title: file.name.replace(/\.[^/.]+$/, ""),
+                            audioBlob: audioBlob,
+                            duration: 0,
+                            dateAdded: new Date().toISOString()
+                        };
+                        
+                        songs.push(song);
+                        saveSongs();
+                        renderSongs();
+                    };
+                }
+            }
+            fileInput.value = '';
+        };
     };
 }
 
@@ -107,46 +282,19 @@ function loadSongs() {
     };
 }
 
-// Render songs in the grid
+// Render songs in the grid using constructor functions
 function renderSongs() {
     const songsGrid = document.getElementById('allSongsGrid');
     songsGrid.innerHTML = '';
     
-    // Add "+" tile for adding new songs
-    const addTile = document.createElement('div');
-    addTile.className = 'song-card add-tile';
-    addTile.onclick = addSong;
-    addTile.innerHTML = `
-        <i class="fas fa-plus"></i>
-        <span>Add Song</span>
-    `;
-    songsGrid.appendChild(addTile);
+    // Add "Add Song" tile using constructor
+    const addSongCard = new AddSongCard();
+    songsGrid.appendChild(addSongCard.create());
     
-    // Add existing songs
+    // Add existing songs using constructor
     songs.forEach(song => {
-        const songCard = document.createElement('div');
-        songCard.className = 'song-card';
-        songCard.onclick = () => playSong(song);
-        
-        songCard.innerHTML = `
-            <div class="default-album-art"><i class="fas fa-music"></i></div>
-            <div class="song-info-section">
-                <div class="song-name">${song.title}</div>
-            </div>
-            <div class="song-menu" onclick="event.stopPropagation(); toggleSongMenu(this, '${song.id}')">
-                <i class="fas fa-ellipsis-v"></i>
-                <div class="song-menu-tooltip">
-                    <div class="song-menu-option" onclick="event.stopPropagation(); addToPlaylist('${song.id}')">
-                        <i class="fas fa-plus"></i> Add to Playlist
-                    </div>
-                    <div class="song-menu-option" onclick="event.stopPropagation(); deleteSong('${song.id}')">
-                        <i class="fas fa-trash"></i> Delete
-                    </div>
-                </div>
-            </div>
-        `;
-        
-        songsGrid.appendChild(songCard);
+        const songCard = new SongCard(song);
+        songsGrid.appendChild(songCard.create());
     });
 }
 
@@ -260,7 +408,18 @@ function addSongToSelectedPlaylists() {
     const selectedCheckboxes = document.querySelectorAll('#playlistSelectionList input[type="checkbox"]:checked');
     
     if (selectedCheckboxes.length === 0) {
-        alert('Please select at least one playlist!');
+        Swal.fire({
+            title: 'No Playlist Selected',
+            text: 'Please select at least one playlist!',
+            icon: 'info',
+            confirmButtonColor: '#4A90E2',
+            background: '#1e1e1e',
+            color: '#fff',
+            customClass: {
+                popup: 'swal-dark-popup',
+                confirmButton: 'swal-confirm-btn'
+            }
+        });
         return;
     }
     
@@ -279,7 +438,18 @@ function addSongToSelectedPlaylists() {
     
     // Show success message
     const selectedCount = selectedCheckboxes.length;
-    alert(`Song added to ${selectedCount} playlist${selectedCount > 1 ? 's' : ''}!`);
+    Swal.fire({
+        title: 'Success!',
+        text: `Song added to ${selectedCount} playlist${selectedCount > 1 ? 's' : ''}!`,
+        icon: 'success',
+        timer: 2000,
+        showConfirmButton: false,
+        background: '#1e1e1e',
+        color: '#fff',
+        customClass: {
+            popup: 'swal-dark-popup'
+        }
+    });
 }
 
 // Playlist Management Functions
@@ -387,7 +557,18 @@ function createPlaylist() {
     const description = document.getElementById('playlistDescription').value.trim();
     
     if (!name) {
-        alert('Please enter a playlist name!');
+        Swal.fire({
+            title: 'Oops!',
+            text: 'Please enter a playlist name!',
+            icon: 'error',
+            confirmButtonColor: '#4A90E2',
+            background: '#1e1e1e',
+            color: '#fff',
+            customClass: {
+                popup: 'swal-dark-popup',
+                confirmButton: 'swal-confirm-btn'
+            }
+        });
         return;
     }
     
