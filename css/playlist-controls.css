@@ -1,0 +1,38 @@
+/* Playlist Delete Button */
+.playlist-delete-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background-color: rgba(0, 0, 0, 0.5);
+    color: #fff;
+    border: none;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    opacity: 0;
+    transform: scale(0.8);
+    transition: all 0.2s ease;
+}
+
+.playlist-cover:hover .playlist-delete-btn {
+    opacity: 1;
+    transform: scale(1);
+}
+
+.playlist-delete-btn:hover {
+    background-color: #f44336; /* Red color when hovering */
+    color: white;
+}
+
+.playlist-delete-btn i {
+    font-size: 14px;
+}
+
+/* Position the playlist cover to support absolute positioning */
+.playlist-cover {
+    position: relative;
+}

@@ -52,14 +52,28 @@ function SongCard(song) {
         return this.element;
     };
     
-    // Play the song
+    // Play the song and create a virtual playlist with all songs
     this.play = function() {
         const audioURL = URL.createObjectURL(this.song.audioBlob);
+        
+        // Create a virtual playlist called "All Songs"
+        const allSongsPlaylist = {
+            id: "all-songs-virtual",
+            name: "All Songs",
+            songs: songs.map(song => song.id) // Include all song IDs
+        };
+        
+        // Save the virtual playlist to session storage
+        sessionStorage.setItem('currentPlaylist', JSON.stringify(allSongsPlaylist));
+        
+        // Store the current song's details
         sessionStorage.setItem('currentSong', JSON.stringify({
             title: this.song.title,
             audioURL: audioURL,
             id: this.song.id
         }));
+        
+        // Navigate to the player page
         window.location.href = 'index.html';
     };
     
@@ -296,6 +310,12 @@ function renderSongs() {
         const songCard = new SongCard(song);
         songsGrid.appendChild(songCard.create());
     });
+    
+    // Update the song count display
+    const songCountElement = document.getElementById('totalSongs');
+    if (songCountElement) {
+        songCountElement.textContent = `${songs.length} song${songs.length !== 1 ? 's' : ''}`;
+    }
 }
 
 // Toggle song menu tooltip
@@ -394,12 +414,12 @@ function showPlaylistSelection() {
         });
     }
     
-    modal.classList.add('active');
+    openModal('playlistSelectionModal');
 }
 
 // Close playlist selection modal
 function closePlaylistSelection() {
-    document.getElementById('playlistSelectionModal').classList.remove('active');
+    closeModal('playlistSelectionModal');
     currentSongForPlaylistSelection = null;
 }
 
@@ -513,6 +533,12 @@ function renderPlaylists() {
     `;
     playlistsGrid.appendChild(addTile);
     
+    // Update the playlist count display
+    const playlistCountElement = document.getElementById('totalPlaylists');
+    if (playlistCountElement) {
+        playlistCountElement.textContent = `${playlists.length} playlist${playlists.length !== 1 ? 's' : ''}`;
+    }
+    
     // Add existing playlists
     playlists.forEach(playlist => {
         // Use stored cover image, or assign a default if not present (for existing playlists)
@@ -526,10 +552,12 @@ function renderPlaylists() {
         
         const playlistCard = document.createElement('div');
         playlistCard.className = 'playlist-card';
-        playlistCard.onclick = () => openPlaylistDetails(playlist.id);
         
         playlistCard.innerHTML = `
             <div class="playlist-cover" style="background-image: url('${coverImage}')">
+                <button class="playlist-delete-btn" title="Delete Playlist">
+                    <i class="fas fa-trash"></i>
+                </button>
             </div>
             <div class="playlist-info">
                 <h4 class="playlist-name">${playlist.name}</h4>
@@ -539,9 +567,147 @@ function renderPlaylists() {
                 </div>
             </div>
         `;
+        
+        // Add click event to play the playlist
+        playlistCard.addEventListener('click', (e) => {
+            // Don't trigger playlist play if clicking the delete button
+            if (!e.target.closest('.playlist-delete-btn')) {
+                openPlaylistDetails(playlist.id);
+            }
+        });
+        
+        // Add delete button functionality
+        const deleteBtn = playlistCard.querySelector('.playlist-delete-btn');
+        deleteBtn.addEventListener('click', (e) => {
+            e.stopPropagation(); // Prevent triggering the playlist play
+            deletePlaylist(playlist.id);
+        });
         playlistsGrid.appendChild(playlistCard);
     });
 }
+
+// Modal Constructor
+function Modal(id, title, content, actionButtonText, actionCallback, width = '400px') {
+    this.id = id;
+    this.title = title;
+    this.content = content;
+    this.actionButtonText = actionButtonText;
+    this.actionCallback = actionCallback;
+    this.width = width;
+    this.element = null;
+    
+    // Create modal element
+    this.create = function() {
+        // Check if modal already exists
+        let existingModal = document.getElementById(this.id);
+        if (existingModal) {
+            return existingModal;
+        }
+        
+        // Create modal container
+        const modal = document.createElement('div');
+        modal.id = this.id;
+        modal.className = 'modal';
+        modal.style.display = 'none';
+        
+        // Create modal content
+        modal.innerHTML = `
+            <div class="modal-content" style="width: ${this.width}">
+                <div class="modal-header">
+                    <h3>${this.title}</h3>
+                    <button class="close-btn" onclick="closeModal('${this.id}')">&times;</button>
+                </div>
+                <div class="modal-body">
+                    ${this.content}
+                </div>
+                <div class="modal-actions">
+                    <button class="modal-btn cancel" onclick="closeModal('${this.id}')">Cancel</button>
+                    <button class="modal-btn confirm" id="${this.id}-action">${this.actionButtonText}</button>
+                </div>
+            </div>
+        `;
+        
+        // Add modal to document
+        document.body.appendChild(modal);
+        
+        // Add event listener for action button
+        document.getElementById(`${this.id}-action`).addEventListener('click', this.actionCallback);
+        
+        this.element = modal;
+        return modal;
+    };
+    
+    // Show the modal
+    this.open = function() {
+        if (!this.element) {
+            this.create();
+        }
+        this.element.style.display = 'flex';
+    };
+    
+    // Close the modal
+    this.close = function() {
+        if (this.element) {
+            this.element.style.display = 'none';
+        }
+    };
+}
+
+// Create Playlist Modal Constructor
+function CreatePlaylistModal() {
+    const content = `
+        <div class="input-group">
+            <label for="playlistName">Playlist Name</label>
+            <input type="text" id="playlistName" placeholder="Enter playlist name">
+        </div>
+        <div class="input-group">
+            <label for="playlistDescription">Description (optional)</label>
+            <textarea id="playlistDescription" placeholder="Enter playlist description"></textarea>
+        </div>
+    `;
+    
+    const modal = new Modal(
+        'createPlaylistModal',
+        'Create Playlist',
+        content,
+        'Create',
+        createPlaylist
+    );
+    
+    return modal;
+}
+
+// Playlist Selection Modal Constructor
+function PlaylistSelectionModal() {
+    const content = `
+        <div class="playlist-selection-list" id="playlistSelectionList">
+            <!-- Playlist options will be dynamically added here -->
+        </div>
+    `;
+    
+    const modal = new Modal(
+        'playlistSelectionModal',
+        'Add Song to Playlists',
+        content,
+        'Add to Playlists',
+        addSongToSelectedPlaylists,
+        '450px'
+    );
+    
+    return modal;
+}
+
+// Create modals when the document loads
+document.addEventListener('DOMContentLoaded', function() {
+    const createPlaylistModal = new CreatePlaylistModal();
+    createPlaylistModal.create();
+    
+    const playlistSelectionModal = new PlaylistSelectionModal();
+    playlistSelectionModal.create();
+    
+    // Add event listener for "Play All" button
+    document.getElementById('playAllBtn').addEventListener('click', playAllSongs);
+});
 
 // Modal functions
 function openModal(modalId) {
@@ -597,14 +763,119 @@ function createPlaylist() {
 
 // Placeholder functions for playlist management
 function playPlaylist(playlistId) {
-    console.log('Playing playlist:', playlistId);
-    // Implementation depends on your player requirements
+    // Find the selected playlist
+    const playlist = playlists.find(pl => pl.id === playlistId);
+    
+    // Check if playlist exists and has songs
+    if (!playlist || !playlist.songs || playlist.songs.length === 0) {
+        // Show popup for empty playlist
+        Swal.fire({
+            title: 'Empty Playlist',
+            text: 'This playlist has no songs. Add songs to play it.',
+            icon: 'info',
+            background: '#1e1e1e',
+            color: '#fff',
+            customClass: {
+                popup: 'swal-dark-popup'
+            }
+        });
+        return;
+    }
+    
+    // Store the playlist information in sessionStorage
+    sessionStorage.setItem('currentPlaylist', JSON.stringify({
+        id: playlist.id,
+        name: playlist.name,
+        songs: playlist.songs
+    }));
+    
+    // Navigate to the player page
+    window.location.href = 'index.html';
 }
 
 function openPlaylistDetails(playlistId) {
-    console.log('Opening playlist details:', playlistId);
-    // Implementation for playlist viewing/editing
+    // When a playlist card is clicked, play the playlist
+    playPlaylist(playlistId);
 }
+
+// Delete playlist function
+function deletePlaylist(playlistId) {
+    Swal.fire({
+        title: 'Delete Playlist?',
+        text: "The playlist will be deleted but the songs will remain in your library.",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#f44336',
+        cancelButtonColor: '#666',
+        confirmButtonText: 'Yes, delete it!',
+        cancelButtonText: 'Cancel',
+        background: '#1e1e1e',
+        color: '#fff',
+        customClass: {
+            popup: 'swal-dark-popup',
+            confirmButton: 'swal-confirm-btn',
+            cancelButton: 'swal-cancel-btn'
+        }
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // Remove the playlist from the array
+            playlists = playlists.filter(playlist => playlist.id !== playlistId);
+            
+            // Save updated playlists to IndexedDB
+            savePlaylists();
+            
+            // Re-render the playlists grid
+            renderPlaylists();
+            
+            // Show success message
+            Swal.fire({
+                title: 'Deleted!',
+                text: 'Your playlist has been deleted.',
+                icon: 'success',
+                timer: 2000,
+                showConfirmButton: false,
+                background: '#1e1e1e',
+                color: '#fff',
+                customClass: {
+                    popup: 'swal-dark-popup'
+                }
+            });
+        }
+    });
+}
+
+// Play all songs in order
+function playAllSongs() {
+    // Check if there are any songs
+    if (songs.length === 0) {
+        Swal.fire({
+            title: 'No Songs Available',
+            text: 'Please add some songs to your library first!',
+            icon: 'info',
+            background: '#1e1e1e',
+            color: '#fff',
+            customClass: {
+                popup: 'swal-dark-popup'
+            }
+        });
+        return;
+    }
+    
+    // Create a virtual playlist with all songs
+    const allSongsPlaylist = {
+        id: "all-songs-ordered",
+        name: "All Songs",
+        songs: songs.map(song => song.id) // Include all song IDs in the original order
+    };
+    
+    // Save the virtual playlist to session storage
+    sessionStorage.setItem('currentPlaylist', JSON.stringify(allSongsPlaylist));
+    
+    // Navigate to the player page
+    window.location.href = 'index.html';
+}
+
+// Format time helper function
 
 // Format time helper function
 function formatTime(seconds) {

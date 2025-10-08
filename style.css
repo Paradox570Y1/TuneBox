@@ -249,6 +249,28 @@ input[type="range"]::-webkit-slider-thumb {
 
 .playlist-header {
     padding: 20px 20px 10px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.playlist-btn {
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    color: #b3b3b3;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.playlist-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    color: #fff;
 }
 
 #playlist-songs {
@@ -281,6 +303,48 @@ input[type="range"]::-webkit-slider-thumb {
 .playlist-item.active .song-title { color: #4A90E2; }
 .playlist-item .song-title { font-weight: 600; }
 .playlist-item .song-info { font-size: 12px; color: #b3b3b3; }
+
+.playlist-item.empty-message {
+    text-align: center;
+    cursor: default;
+    padding: 30px 10px;
+    opacity: 0.7;
+    background-color: transparent !important;
+}
+
+.playlist-item {
+    position: relative;
+    padding-right: 40px; /* Space for the delete button */
+}
+
+.remove-from-playlist {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    color: #b3b3b3;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 0.7;
+    transition: all 0.2s ease;
+}
+
+.remove-from-playlist:hover {
+    background: rgba(255, 0, 0, 0.2);
+    color: #ff5252;
+    opacity: 1;
+}
+
+.playlist-item:hover .remove-from-playlist {
+    opacity: 1;
+}
 
 
 #addSongBtn {
@@ -405,6 +469,11 @@ input[type="range"]::-webkit-slider-thumb {
 
 /* Small mobile styles */
 @media (max-width: 480px) {
+    .remove-from-playlist {
+        width: 28px;
+        height: 28px;
+        right: 5px;
+    }
     body {
         align-items: flex-start;
         padding: 5px;
