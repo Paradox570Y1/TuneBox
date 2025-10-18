@@ -320,7 +320,7 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("backToHome").addEventListener("click", () => {
     // Clear playlist selection from session storage before going back
     sessionStorage.removeItem('currentPlaylist');
-    window.location.href = 'home.html';
+    window.location.href = 'index.html';
   });
 
   // Handle file selection when user picks an audio file

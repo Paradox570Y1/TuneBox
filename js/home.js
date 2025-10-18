@@ -74,7 +74,7 @@ function SongCard(song) {
         }));
         
         // Navigate to the player page
-        window.location.href = 'index.html';
+        window.location.href = 'player.html';
     };
     
     // Show context menu
@@ -355,7 +355,7 @@ function playSong(song) {
     }));
     
     // Navigate to main player
-    window.location.href = 'index.html';
+    window.location.href = 'player.html';
 }
 
 // Delete song function
@@ -790,7 +790,7 @@ function playPlaylist(playlistId) {
     }));
     
     // Navigate to the player page
-    window.location.href = 'index.html';
+    window.location.href = 'player.html';
 }
 
 function openPlaylistDetails(playlistId) {
@@ -872,7 +872,7 @@ function playAllSongs() {
     sessionStorage.setItem('currentPlaylist', JSON.stringify(allSongsPlaylist));
     
     // Navigate to the player page
-    window.location.href = 'index.html';
+    window.location.href = 'player.html';
 }
 
 // Format time helper function

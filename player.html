@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Music Player</title>
+    <link rel="stylesheet" href="./css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <script src="./js/script.js" defer></script>
+    <script src="./js/playlist-utils.js" defer></script>
+</head>
+
+<body>
+    <header class="nav-header">
+        <button class="nav-btn" onclick="window.location.href='index.html'">
+            <i class="fas fa-home"></i> Home
+        </button>
+        <h1>TuneBox Player</h1>
+        <div class="nav-spacer"></div>
+    </header>
+
+    <div class="container">
+        <div class="player">
+            <div class="player-main">
+                <div class="track-art">
+                    <img src="./assets/LOGO.png" alt="Album Art">
+                </div>
+                <div class="track-info">
+                    <h2 class="track-title">Song Title</h2>
+                </div>
+
+                <div class="progress-container">
+                    <span class="current-time">0:00</span>
+                    <input type="range" min="0" max="100" value="0" class="progress-bar">
+                    <span class="total-duration">3:45</span>
+                    <div class="volume-container">
+                        <div class="volume-control">
+                            <i class="fas fa-volume-high"></i>
+                            <input type="range" min="0" max="100" value="50" class="volume-bar">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="controls">
+                    <button class="control-btn"><i class="fas fa-backward-step"></i></button>
+                    <button id="play-pause-btn" class="control-btn play-btn"><i class="fas fa-play"></i></button>
+                    <button class="control-btn"><i class="fas fa-forward-step"></i></button>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="playlist">
+            <div class="playlist-header">
+                <h3>Playlist</h3>
+                <button id="backToHome" class="playlist-btn" title="Back to Home">
+                    <i class="fas fa-home"></i>
+                </button>
+            </div>
+            <ul id="playlist-songs">
+                <!-- Dynamic songs will be loaded here -->
+            </ul>
+            <div class="playlist-footer">
+                <input type="file" id="audioUpload" accept="audio/*" style="display:none">
+                <button id="addSongBtn">+ Add Song</button>
+            </div>
+        </div>
+    </div>
+
+</body>
+
+</html>
