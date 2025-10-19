@@ -28,8 +28,14 @@ request.onupgradeneeded = function(event) {
 };
 
 request.onsuccess = (event) => { 
-  db = event.target.result; 
-  loadSongs(); 
+  db = event.target.result;
+  console.log("Database opened successfully");
+  // Wait for DOM to be ready before loading songs
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', loadSongs);
+  } else {
+    loadSongs();
+  }
 };
 
 request.onerror = (event) => console.error("DB Error:", event.target.error);
@@ -155,6 +161,14 @@ function removeSongFromPlaylist(songId) {
 
 // Load all saved songs from database and display in playlist
 function loadSongs() {
+  console.log("loadSongs() called");
+  
+  // Make sure database is ready
+  if (!db) {
+    console.error("Database not initialized yet");
+    return;
+  }
+  
   // Check if a playlist was selected
   const playlistData = sessionStorage.getItem('currentPlaylist');
   const currentSongData = sessionStorage.getItem('currentSong');
@@ -172,6 +186,8 @@ function loadSongs() {
       ...song,
       audioURL: URL.createObjectURL(new Blob([song.audioBlob], { type: 'audio/*' }))
     }));
+    
+    console.log("Songs retrieved from database:", allSongs.length);
     
     // Determine which songs to show: all or from a specific playlist
     if (playlistData) {
@@ -227,7 +243,7 @@ function loadSongs() {
         li.className = "playlist-item";
         
         // Show duration if available
-        const duration = (song.duration && !isNaN(song.duration)) ? ` (${formatTime(song.duration)})` : "";
+        const duration = (song.duration && !isNaN(song.duration)) ? formatTime(song.duration) : "";
         
         // Check if we're in a specific playlist view
         const isPlaylistView = sessionStorage.getItem('currentPlaylist') !== null;
@@ -239,8 +255,10 @@ function loadSongs() {
           </button>` : '';
         
         li.innerHTML = `
-          <span class="song-title">${song.title}</span>
-          <span class="song-info">${duration}</span>
+          <div class="song-content">
+            <span class="song-title">${song.title}</span>
+            <span class="song-info">${duration}</span>
+          </div>
           ${deleteButton}
         `;
         
@@ -275,23 +293,31 @@ function loadSongs() {
     if (songs.length > 0 && !window.currentAudio) {
       // If we're coming from the home page's All Songs section with a selected song,
       // the selected song is now at index 0 due to our reordering above
-      window.loadSong(0);
       
-      // Auto-play when coming from the home page with a specific song selection
-      const playlistData = sessionStorage.getItem('currentPlaylist');
-      const currentSongData = sessionStorage.getItem('currentSong');
-      
-      if (playlistData) {
-        const playlist = JSON.parse(playlistData);
-        // Auto-play if coming from All Songs section or a specific playlist
-        if (playlist.id === "all-songs-virtual" || 
-            playlist.id === "all-songs-ordered" || 
-            currentSongData) {
-          if (window.currentAudio) {
-            window.currentAudio.play();
+      // Use setTimeout to ensure window.loadSong is defined
+      setTimeout(() => {
+        if (window.loadSong) {
+          window.loadSong(0);
+          
+          // Auto-play when coming from the home page with a specific song selection
+          const playlistData = sessionStorage.getItem('currentPlaylist');
+          const currentSongData = sessionStorage.getItem('currentSong');
+          
+          if (playlistData) {
+            const playlist = JSON.parse(playlistData);
+            // Auto-play if coming from All Songs section or a specific playlist
+            if (playlist.id === "all-songs-virtual" || 
+                playlist.id === "all-songs-ordered" || 
+                currentSongData) {
+              if (window.currentAudio) {
+                window.currentAudio.play().catch(err => {
+                  console.log("Auto-play prevented by browser:", err);
+                });
+              }
+            }
           }
         }
-      }
+      }, 100);
     }
   };
 }
@@ -311,20 +337,28 @@ document.addEventListener("DOMContentLoaded", () => {
   let isPlaying = false;
   let currentPlaylist = null;
 
-  // When "Add Song" button is clicked, open file picker
-  document.getElementById("addSongBtn").addEventListener("click", () => {
-    document.getElementById("audioUpload").click();
-  });
+  // When "Add Song" button is clicked, open file picker (only if button exists)
+  const addSongBtn = document.getElementById("addSongBtn");
+  if (addSongBtn) {
+    addSongBtn.addEventListener("click", () => {
+      document.getElementById("audioUpload").click();
+    });
+  }
   
   // When "Back to Home" button is clicked
-  document.getElementById("backToHome").addEventListener("click", () => {
-    // Clear playlist selection from session storage before going back
-    sessionStorage.removeItem('currentPlaylist');
-    window.location.href = 'index.html';
-  });
+  const backToHomeBtn = document.getElementById("backToHome");
+  if (backToHomeBtn) {
+    backToHomeBtn.addEventListener("click", () => {
+      // Clear playlist selection from session storage before going back
+      sessionStorage.removeItem('currentPlaylist');
+      window.location.href = 'index.html';
+    });
+  }
 
-  // Handle file selection when user picks an audio file
-  document.getElementById("audioUpload").addEventListener("change", function(event) {
+  // Handle file selection when user picks an audio file (only if upload input exists)
+  const audioUpload = document.getElementById("audioUpload");
+  if (audioUpload) {
+    audioUpload.addEventListener("change", function(event) {
     let file = event.target.files[0];
     if (!file) return;
 
@@ -352,7 +386,8 @@ document.addEventListener("DOMContentLoaded", () => {
       alert("Error loading audio file. Please try a different file.");
       URL.revokeObjectURL(audio.src);
     };
-  });
+    });
+  }
 
   // Play/Pause button functionality
   playPauseBtn.addEventListener("click", () => {
@@ -376,6 +411,48 @@ document.addEventListener("DOMContentLoaded", () => {
       isPlaying = true;
     }
   });
+
+  // Previous button functionality
+  const prevBtn = document.getElementById("prev-btn");
+  if (prevBtn) {
+    prevBtn.addEventListener("click", () => {
+      if (songs.length === 0) return;
+      
+      // Go to previous song, or loop to last song if at the beginning
+      let newIndex = currentSongIndex - 1;
+      if (newIndex < 0) {
+        newIndex = songs.length - 1;
+      }
+      
+      loadSong(newIndex);
+      if (currentAudio) {
+        currentAudio.play().catch(err => {
+          console.log("Auto-play prevented:", err);
+        });
+      }
+    });
+  }
+
+  // Next button functionality
+  const nextBtn = document.getElementById("next-btn");
+  if (nextBtn) {
+    nextBtn.addEventListener("click", () => {
+      if (songs.length === 0) return;
+      
+      // Go to next song, or loop to first song if at the end
+      let newIndex = currentSongIndex + 1;
+      if (newIndex >= songs.length) {
+        newIndex = 0;
+      }
+      
+      loadSong(newIndex);
+      if (currentAudio) {
+        currentAudio.play().catch(err => {
+          console.log("Auto-play prevented:", err);
+        });
+      }
+    });
+  }
 
   // Allow user to seek through the song by clicking on progress bar
   progressBar.addEventListener("input", () => {
@@ -404,9 +481,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Load a specific song and set up its controls
   function loadSong(index) {
-    if (index < 0 || index >= songs.length) return;
+    console.log("loadSong() called with index:", index);
+    console.log("Total songs available:", songs.length);
+    
+    if (index < 0 || index >= songs.length) {
+      console.error("Invalid song index:", index);
+      return;
+    }
     
     const song = songs[index];
+    console.log("Loading song:", song.title);
     currentSongIndex = index;
     
     // Stop current song if one is playing

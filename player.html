@@ -7,18 +7,18 @@
     <title>Music Player</title>
     <link rel="stylesheet" href="./css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    
+    <!-- SweetAlert2 CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+    
+    <!-- SweetAlert2 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
     <script src="./js/script.js" defer></script>
     <script src="./js/playlist-utils.js" defer></script>
 </head>
 
 <body>
-    <header class="nav-header">
-        <button class="nav-btn" onclick="window.location.href='index.html'">
-            <i class="fas fa-home"></i> Home
-        </button>
-        <h1>TuneBox Player</h1>
-        <div class="nav-spacer"></div>
-    </header>
 
     <div class="container">
         <div class="player">
@@ -43,9 +43,9 @@
                 </div>
 
                 <div class="controls">
-                    <button class="control-btn"><i class="fas fa-backward-step"></i></button>
+                    <button id="prev-btn" class="control-btn"><i class="fas fa-backward-step"></i></button>
                     <button id="play-pause-btn" class="control-btn play-btn"><i class="fas fa-play"></i></button>
-                    <button class="control-btn"><i class="fas fa-forward-step"></i></button>
+                    <button id="next-btn" class="control-btn"><i class="fas fa-forward-step"></i></button>
                 </div>
             </div>
 
@@ -61,10 +61,6 @@
             <ul id="playlist-songs">
                 <!-- Dynamic songs will be loaded here -->
             </ul>
-            <div class="playlist-footer">
-                <input type="file" id="audioUpload" accept="audio/*" style="display:none">
-                <button id="addSongBtn">+ Add Song</button>
-            </div>
         </div>
     </div>
 

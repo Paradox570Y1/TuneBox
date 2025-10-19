@@ -104,6 +104,8 @@ body {
     font-size: 24px;
     font-weight: 600;
     margin-bottom: 25px;
+    width:95%;
+    overflow-x:hidden;
 }
 
 .progress-container {
@@ -297,6 +299,11 @@ input[type="range"]::-webkit-slider-thumb {
 .playlist-item:not(:last-child) {
     margin-bottom: 5px;
 }
+.song-content{
+    width:100%;
+    max-width:250px;
+    overflow-x:hidden;
+}
 
 .playlist-item:hover { background-color: #282828; }
 .playlist-item.active { background-color: #2a2a2a; }
@@ -347,22 +354,6 @@ input[type="range"]::-webkit-slider-thumb {
 }
 
 
-#addSongBtn {
-  width: 100%;
-  padding: 10px;
-  background: #4A90E2;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 16px;
-  transition: background 0.3s ease;
-}
-
-#addSongBtn:hover {
-  background: #4A90E2;
-}
-
 
 /* Mobile and small tablet styles */
 @media (min-width: 480px) and (max-width: 768px){
@@ -400,7 +391,7 @@ input[type="range"]::-webkit-slider-thumb {
     
     .player-main {
         display: grid;
-        grid-template-columns: 120px 1fr;
+        grid-template-columns: 120px 72%;
         grid-template-rows: auto auto auto;
         grid-template-areas: 
             "art info"
@@ -442,6 +433,7 @@ input[type="range"]::-webkit-slider-thumb {
     .controls {
         grid-area: controls;
         margin-top: 0;
+        
     }
     
     .playlist {
@@ -464,6 +456,9 @@ input[type="range"]::-webkit-slider-thumb {
         width: 45px;
         height: 45px;
         font-size: 18px;
+    }
+    .song-content{
+        max-width: 95%;
     }
 }
 

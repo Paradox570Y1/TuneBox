@@ -181,7 +181,7 @@ function SongCard(song) {
                         popup: 'swal-dark-popup'
                     }
                 });
-            }
+            }   
         });
     };
 }
