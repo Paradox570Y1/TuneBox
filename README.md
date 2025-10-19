@@ -8,3 +8,5 @@ A web-based music player that enables users to play, pause, and navigate through
 - Interactive progress bar with seek functionality
 - Volume control with mute/unmute option
 - Timer showing current time and total duration of tracks
+- Create Playlist to organize your music.
+- Saves Songs in your Browser.

@@ -1,555 +1,397 @@
+// Player Page - Music Player Controls
+let db, currentAudio = null, currentSongIndex = 0, songs = [], isPlaying = false;
 
-// Simple song object to store song information
-function Song(title, duration, fileName) {
-  this.title = title;
-  this.duration = duration;
-  this.fileName = fileName;
-  this.addedAt = new Date();
-}
+// Utilities
+const formatTime = s => isNaN(s) || s < 0 ? "0:00" : `${Math.floor(s / 60)}:${(Math.floor(s % 60)).toString().padStart(2, '0')}`;
 
-// Global variables for music player state
-let db;
-let currentAudio = null;
-let currentSongIndex = 0;
-let songs = [];
+// Database setup
+const initDB = () => new Promise((resolve, reject) => {
+    const req = indexedDB.open("MusicDB", 1);
+    req.onupgradeneeded = e => {
+        const db = e.target.result;
+        if (db.objectStoreNames.contains("songs")) db.deleteObjectStore("songs");
+        db.createObjectStore("songs", { keyPath: "id", autoIncrement: true }).createIndex("title", "title", { unique: false });
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+});
 
-// Set up local database for storing songs
-let request = indexedDB.open("MusicDB", 1);
-
-request.onupgradeneeded = function(event) {
-  db = event.target.result;
-
-  if (db.objectStoreNames.contains("songs")) {
-    db.deleteObjectStore("songs");
-  }
-  
-  let store = db.createObjectStore("songs", { keyPath: "id", autoIncrement: true });
-  store.createIndex("title", "title", { unique: false });
-};
-
-request.onsuccess = (event) => { 
-  db = event.target.result;
-  console.log("Database opened successfully");
-  // Wait for DOM to be ready before loading songs
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', loadSongs);
-  } else {
+// Save song to DB
+const addSongToDB = async (song, file) => {
+    const buffer = await file.arrayBuffer();
+    song.audioBlob = buffer;
+    const tx = db.transaction("songs", "readwrite");
+    await tx.objectStore("songs").add(song);
     loadSongs();
-  }
 };
 
-request.onerror = (event) => console.error("DB Error:", event.target.error);
+// Update playlist in DB
+const updatePlaylistInDB = playlist => {
+    return new Promise((resolve, reject) => {
+        const req = indexedDB.open('TuneBoxPlaylists', 1);
+        req.onsuccess = e => {
+            const tx = e.target.result.transaction(['playlists'], 'readwrite');
+            const store = tx.objectStore('playlists');
+            const getReq = store.get(playlist.id);
+            getReq.onsuccess = () => {
+                const full = getReq.result;
+                if (full) {
+                    full.songs = playlist.songs;
+                    store.put(full);
+                    tx.oncomplete = () => resolve();
+                    tx.onerror = () => reject(tx.error);
+                } else {
+                    resolve();
+                }
+            };
+            getReq.onerror = () => reject(getReq.error);
+        };
+        req.onerror = () => reject(req.error);
+    });
+};
 
-// Convert seconds to readable time format (e.g., "3:45")
-function formatTime(seconds) {
-  if (isNaN(seconds) || seconds < 0) {
-    return "0:00";
-  }
-  const minutes = Math.floor(seconds / 60);
-  const remainingSeconds = Math.floor(seconds % 60);
-  return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
-}
-
-// Save uploaded song to local database
-function addSongToDB(song, file) {
-  // Convert file to binary data for storage
-  const reader = new FileReader();
-  reader.onload = function(event) {
-    song.audioBlob = event.target.result;
+// Remove song from playlist OR delete song entirely
+const removeSongFromPlaylist = async songId => {
+    const playlistData = sessionStorage.getItem('currentPlaylist');
+    if (!playlistData) return;
     
-    let transaction = db.transaction("songs", "readwrite");
-    let store = transaction.objectStore("songs");
-    let request = store.add(song);
-
-    request.onsuccess = () => { 
-      loadSongs(); 
-      console.log("Song added successfully:", song.title);
-    };
-    request.onerror = (e) => {
-      console.error("Save failed:", e);
-      alert("Failed to save song. Please try again.");
-    };
-  };
-  
-  reader.onerror = function() {
-    alert("Error reading file. Please try again.");
-  };
-  
-  reader.readAsArrayBuffer(file);
-}
-
-// Function to update the playlist in IndexedDB
-function updatePlaylistInDB(playlist) {
-  // Open the IndexedDB for playlists
-  const request = indexedDB.open('TuneBoxPlaylists', 1);
-  
-  request.onsuccess = function(e) {
-    const db = e.target.result;
-    const transaction = db.transaction(['playlists'], 'readwrite');
-    const store = transaction.objectStore('playlists');
+    const playlist = JSON.parse(playlistData);
+    const song = songs.find(s => s.id === songId);
+    const isAllSongsView = playlist.id === "all-songs-virtual" || playlist.id === "all-songs-ordered";
     
-    // Get the full playlist object from DB first
-    const getRequest = store.get(playlist.id);
+    // Different behavior for "All Songs" vs specific playlists
+    const result = await Swal.fire({
+        title: isAllSongsView ? 'Delete Song?' : 'Remove Song?',
+        text: isAllSongsView 
+            ? `Delete "${song?.title || 'this song'}" permanently? It will be removed from all playlists.`
+            : `Remove "${song?.title || 'this song'}" from "${playlist.name}" playlist?`,
+        icon: isAllSongsView ? 'warning' : 'question',
+        showCancelButton: true,
+        confirmButtonColor: isAllSongsView ? '#f44336' : '#ff5252',
+        cancelButtonColor: '#666',
+        confirmButtonText: isAllSongsView ? 'Yes, delete it!' : 'Remove',
+        background: '#1e1e1e',
+        color: '#fff',
+        customClass: { popup: 'swal-dark-popup' }
+    });
     
-    getRequest.onsuccess = function() {
-      const fullPlaylist = getRequest.result;
-      if (fullPlaylist) {
-        // Update just the songs array
-        fullPlaylist.songs = playlist.songs;
-        // Put it back in the database
-        store.put(fullPlaylist);
-      }
-    };
-  };
-}
-
-// Function to remove a song from the current playlist
-function removeSongFromPlaylist(songId) {
-  const playlistData = sessionStorage.getItem('currentPlaylist');
-  if (!playlistData) return;
-  
-  const playlistInfo = JSON.parse(playlistData);
-  
-  // Get song title for the confirmation dialog
-  const song = songs.find(s => s.id === songId);
-  const songTitle = song ? song.title : 'this song';
-  
-  // Show confirmation dialog with SweetAlert2
-  Swal.fire({
-    title: 'Remove Song?',
-    text: `Remove "${songTitle}" from "${playlistInfo.name}" playlist?`,
-    icon: 'question',
-    showCancelButton: true,
-    confirmButtonColor: '#ff5252',
-    cancelButtonColor: '#666',
-    confirmButtonText: 'Remove',
-    cancelButtonText: 'Cancel',
-    background: '#1e1e1e',
-    color: '#fff',
-    customClass: {
-      popup: 'swal-dark-popup',
-      confirmButton: 'swal-confirm-btn',
-      cancelButton: 'swal-cancel-btn'
-    }
-  }).then((result) => {
     if (!result.isConfirmed) return;
     
-    // Remove the song ID from the playlist's songs array
-    if (playlistInfo.songs) {
-      playlistInfo.songs = playlistInfo.songs.filter(id => id !== songId);
-      
-      // Update sessionStorage with the modified playlist
-      sessionStorage.setItem('currentPlaylist', JSON.stringify(playlistInfo));
-      
-      // Update the database with the modified playlist
-      updatePlaylistInDB(playlistInfo);
-      
-      // Reload the songs display
-      loadSongs();
-      
-      // If current song was removed, stop playback
-      if (currentAudio && songs.findIndex(song => song.id === songId) === currentSongIndex) {
-        currentAudio.pause();
-        if (songs.length > 0) {
-          // Play the next available song if any
-          window.loadSong(Math.min(currentSongIndex, songs.length - 1));
-        }
-      }
-    }
-  });
-}
-
-// Load all saved songs from database and display in playlist
-function loadSongs() {
-  console.log("loadSongs() called");
-  
-  // Make sure database is ready
-  if (!db) {
-    console.error("Database not initialized yet");
-    return;
-  }
-  
-  // Check if a playlist was selected
-  const playlistData = sessionStorage.getItem('currentPlaylist');
-  const currentSongData = sessionStorage.getItem('currentSong');
-  
-  // First update the playlist header
-  const playlistHeader = document.querySelector(".playlist-header h3");
-  
-  // Start transaction to get all songs
-  let transaction = db.transaction("songs", "readonly");
-  let store = transaction.objectStore("songs");
-  let request = store.getAll();
-
-  request.onsuccess = () => {
-    const allSongs = request.result.map(song => ({
-      ...song,
-      audioURL: URL.createObjectURL(new Blob([song.audioBlob], { type: 'audio/*' }))
-    }));
+    // Check if this is the currently playing song BEFORE we modify anything
+    const isCurrentSong = currentAudio && songs[currentSongIndex]?.id === songId;
+    // Store the currently playing song's ID to find it again after reload
+    const currentlyPlayingSongId = currentAudio && !isCurrentSong ? songs[currentSongIndex]?.id : null;
     
-    console.log("Songs retrieved from database:", allSongs.length);
-    
-    // Determine which songs to show: all or from a specific playlist
-    if (playlistData) {
-      const playlist = JSON.parse(playlistData);
-      playlistHeader.textContent = playlist.name;
-      
-      // Filter songs that belong to this playlist
-      songs = allSongs.filter(song => 
-        playlist.songs && playlist.songs.includes(song.id)
-      );
-      
-      // Check if we have currentSongData from the home page selection
-      // If we're coming from the "All Songs" section of the home page
-      const currentSongData = sessionStorage.getItem('currentSong');
-      if (currentSongData && playlist.id === "all-songs-virtual") {
-        // Get the currently selected song
-        const currentSong = JSON.parse(currentSongData);
-        
-        // Reorder songs array to put the selected song first
-        const selectedSongIndex = songs.findIndex(song => song.id === currentSong.id);
-        if (selectedSongIndex !== -1) {
-          // Move the selected song to the beginning of the array
-          const selectedSong = songs.splice(selectedSongIndex, 1)[0];
-          songs.unshift(selectedSong);
-        }
-      }
-    } else if (currentSongData) {
-      // If coming from a single song play
-      playlistHeader.textContent = "Now Playing";
-      songs = allSongs;
-    } else {
-      // Default behavior - show all songs
-      playlistHeader.textContent = "All Songs";
-      songs = allSongs;
-    }
-    
-    let list = document.getElementById("playlist-songs");
-    list.innerHTML = "";
-    
-    // Show message if playlist is empty
-    if (songs.length === 0) {
-      const emptyMessage = document.createElement("li");
-      emptyMessage.className = "playlist-item empty-message";
-      emptyMessage.innerHTML = `
-        <span class="song-title">No songs in this playlist</span>
-        <span class="song-info">Add songs from the home page</span>
-      `;
-      list.appendChild(emptyMessage);
-    } else {
-      // Create playlist items for each song
-      songs.forEach((song, index) => {
-        let li = document.createElement("li");
-        li.className = "playlist-item";
-        
-        // Show duration if available
-        const duration = (song.duration && !isNaN(song.duration)) ? formatTime(song.duration) : "";
-        
-        // Check if we're in a specific playlist view
-        const isPlaylistView = sessionStorage.getItem('currentPlaylist') !== null;
-        
-        // Add a delete button if we're in a playlist view
-        const deleteButton = isPlaylistView ? 
-          `<button class="remove-from-playlist" title="Remove from playlist">
-            <i class="fas fa-times"></i>
-          </button>` : '';
-        
-        li.innerHTML = `
-          <div class="song-content">
-            <span class="song-title">${song.title}</span>
-            <span class="song-info">${duration}</span>
-          </div>
-          ${deleteButton}
-        `;
-        
-        // Add click event for the song item
-        li.addEventListener("click", function(e) {
-          // Don't play the song if clicking the delete button
-          if (e.target.closest('.remove-from-playlist')) {
-            return;
-          }
-          
-          window.loadSong(index);
-          // Auto-play when user clicks on a song
-          if (window.currentAudio) {
-            window.currentAudio.play();
-          }
+    if (isAllSongsView) {
+        // Delete song entirely from database and all playlists
+        // 1. Delete from songs database
+        await new Promise((resolve, reject) => {
+            const tx = db.transaction("songs", "readwrite");
+            const store = tx.objectStore("songs");
+            const deleteReq = store.delete(songId);
+            
+            deleteReq.onsuccess = () => resolve();
+            deleteReq.onerror = () => reject(deleteReq.error);
         });
         
-        // Add event listener for delete button if it exists
-        const removeBtn = li.querySelector('.remove-from-playlist');
-        if (removeBtn) {
-          removeBtn.addEventListener('click', function(e) {
-            e.stopPropagation(); // Prevent triggering song play
-            removeSongFromPlaylist(song.id);
-          });
+        // 2. Remove from all playlists
+        await new Promise((resolve, reject) => {
+            const playlistsReq = indexedDB.open('TuneBoxPlaylists', 1);
+            playlistsReq.onsuccess = async e => {
+                const pdb = e.target.result;
+                const ptx = pdb.transaction(['playlists'], 'readwrite');
+                const pstore = ptx.objectStore('playlists');
+                
+                const getAllReq = pstore.getAll();
+                getAllReq.onsuccess = () => {
+                    const allPlaylists = getAllReq.result || [];
+                    
+                    allPlaylists.forEach(p => {
+                        p.songs = p.songs.filter(id => id !== songId);
+                        pstore.put(p);
+                    });
+                    
+                    ptx.oncomplete = () => resolve();
+                    ptx.onerror = () => reject(ptx.error);
+                };
+            };
+            playlistsReq.onerror = () => reject(playlistsReq.error);
+        });
+        
+        // 3. Handle playback if current song was removed (BEFORE reloading)
+        if (isCurrentSong) {
+            currentAudio.pause();
+            currentAudio = null;
         }
         
-        list.appendChild(li);
-      });
-    }
-    
-    // Load first song when app starts
-    if (songs.length > 0 && !window.currentAudio) {
-      // If we're coming from the home page's All Songs section with a selected song,
-      // the selected song is now at index 0 due to our reordering above
-      
-      // Use setTimeout to ensure window.loadSong is defined
-      setTimeout(() => {
-        if (window.loadSong) {
-          window.loadSong(0);
-          
-          // Auto-play when coming from the home page with a specific song selection
-          const playlistData = sessionStorage.getItem('currentPlaylist');
-          const currentSongData = sessionStorage.getItem('currentSong');
-          
-          if (playlistData) {
-            const playlist = JSON.parse(playlistData);
-            // Auto-play if coming from All Songs section or a specific playlist
-            if (playlist.id === "all-songs-virtual" || 
-                playlist.id === "all-songs-ordered" || 
-                currentSongData) {
-              if (window.currentAudio) {
-                window.currentAudio.play().catch(err => {
-                  console.log("Auto-play prevented by browser:", err);
-                });
-              }
+        // 4. Reload songs and show success
+        await loadSongs();
+        
+        // 5. Update currentSongIndex if a different song was removed
+        if (currentlyPlayingSongId) {
+            const newIndex = songs.findIndex(s => s.id === currentlyPlayingSongId);
+            if (newIndex !== -1) {
+                currentSongIndex = newIndex;
+                // Re-highlight the correct song
+                document.querySelectorAll(".playlist-item").forEach((item, i) => 
+                    item.classList.toggle("active", i === newIndex));
             }
-          }
         }
-      }, 100);
-    }
-  };
-}
-
-// Main setup when page loads
-document.addEventListener("DOMContentLoaded", () => {
-  // Get all the player controls
-  const playPauseBtn = document.getElementById("play-pause-btn");
-  const playPauseIcon = playPauseBtn.querySelector("i");
-  const progressBar = document.querySelector(".progress-bar");
-  const currentTimeEl = document.querySelector(".current-time");
-  const totalDurationEl = document.querySelector(".total-duration");
-  const trackTitle = document.querySelector(".track-title");
-  const volumeBar = document.querySelector(".volume-bar");
-  const playlistHeader = document.querySelector(".playlist-header h3");
-  
-  let isPlaying = false;
-  let currentPlaylist = null;
-
-  // When "Add Song" button is clicked, open file picker (only if button exists)
-  const addSongBtn = document.getElementById("addSongBtn");
-  if (addSongBtn) {
-    addSongBtn.addEventListener("click", () => {
-      document.getElementById("audioUpload").click();
-    });
-  }
-  
-  // When "Back to Home" button is clicked
-  const backToHomeBtn = document.getElementById("backToHome");
-  if (backToHomeBtn) {
-    backToHomeBtn.addEventListener("click", () => {
-      // Clear playlist selection from session storage before going back
-      sessionStorage.removeItem('currentPlaylist');
-      window.location.href = 'index.html';
-    });
-  }
-
-  // Handle file selection when user picks an audio file (only if upload input exists)
-  const audioUpload = document.getElementById("audioUpload");
-  if (audioUpload) {
-    audioUpload.addEventListener("change", function(event) {
-    let file = event.target.files[0];
-    if (!file) return;
-
-    // Create temporary audio element to extract duration
-    let audio = document.createElement("audio");
-    audio.src = URL.createObjectURL(file);
-
-    audio.onloadedmetadata = function() {
-      let duration = Math.floor(audio.duration) || 0;
-      let title = file.name.replace(/\.[^/.]+$/, ""); // Remove file extension
-
-      let song = new Song(title, duration, file.name);
-      addSongToDB(song, file);
-      
-      console.log("Added song:", {
-        title,
-        duration: formatTime(duration)
-      });
-      
-      // Clean up temporary audio element
-      URL.revokeObjectURL(audio.src);
-    };
-    
-    audio.onerror = function() {
-      alert("Error loading audio file. Please try a different file.");
-      URL.revokeObjectURL(audio.src);
-    };
-    });
-  }
-
-  // Play/Pause button functionality
-  playPauseBtn.addEventListener("click", () => {
-    if (!currentAudio) {
-      // If no song is loaded, start with the first song
-      if (songs.length > 0) {
-        loadSong(0);
-      }
-      return;
-    }
-
-    if (isPlaying) {
-      currentAudio.pause();
-      playPauseIcon.classList.remove("fa-pause");
-      playPauseIcon.classList.add("fa-play");
-      isPlaying = false;
+        
+        // 6. Auto-play next song if we removed the current one
+        if (isCurrentSong && songs.length > 0) {
+            loadSong(Math.min(currentSongIndex, songs.length - 1));
+            currentAudio?.play().catch(() => {});
+        }
+        
+        Swal.fire({
+            title: 'Deleted!',
+            text: 'Song has been permanently deleted.',
+            icon: 'success',
+            timer: 2000,
+            showConfirmButton: false,
+            background: '#1e1e1e',
+            color: '#fff',
+            customClass: { popup: 'swal-dark-popup' }
+        });
     } else {
-      currentAudio.play();
-      playPauseIcon.classList.remove("fa-play");
-      playPauseIcon.classList.add("fa-pause");
-      isPlaying = true;
+        // Just remove from current playlist
+        playlist.songs = playlist.songs.filter(id => id !== songId);
+        sessionStorage.setItem('currentPlaylist', JSON.stringify(playlist));
+        await updatePlaylistInDB(playlist);
+        
+        // Handle playback if current song was removed (BEFORE reloading)
+        if (isCurrentSong) {
+            currentAudio.pause();
+            currentAudio = null;
+        }
+        
+        await loadSongs();
+        
+        // Update currentSongIndex if a different song was removed
+        if (currentlyPlayingSongId) {
+            const newIndex = songs.findIndex(s => s.id === currentlyPlayingSongId);
+            if (newIndex !== -1) {
+                currentSongIndex = newIndex;
+                // Re-highlight the correct song
+                document.querySelectorAll(".playlist-item").forEach((item, i) => 
+                    item.classList.toggle("active", i === newIndex));
+            }
+        }
+        
+        // Auto-play next song if we removed the current one
+        if (isCurrentSong && songs.length > 0) {
+            loadSong(Math.min(currentSongIndex, songs.length - 1));
+            currentAudio?.play().catch(() => {});
+        }
     }
-  });
+};
 
-  // Previous button functionality
-  const prevBtn = document.getElementById("prev-btn");
-  if (prevBtn) {
-    prevBtn.addEventListener("click", () => {
-      if (songs.length === 0) return;
-      
-      // Go to previous song, or loop to last song if at the beginning
-      let newIndex = currentSongIndex - 1;
-      if (newIndex < 0) {
-        newIndex = songs.length - 1;
-      }
-      
-      loadSong(newIndex);
-      if (currentAudio) {
-        currentAudio.play().catch(err => {
-          console.log("Auto-play prevented:", err);
-        });
-      }
+// Load songs from DB
+const loadSongs = async () => {
+    if (!db) return;
+    
+    const playlistData = sessionStorage.getItem('currentPlaylist');
+    const currentSongData = sessionStorage.getItem('currentSong');
+    const playlistHeader = document.querySelector(".playlist-header h3");
+    
+    const tx = db.transaction("songs", "readonly");
+    const allSongs = await new Promise(resolve => {
+        const req = tx.objectStore("songs").getAll();
+        req.onsuccess = () => resolve(req.result.map(song => ({
+            ...song,
+            audioURL: URL.createObjectURL(new Blob([song.audioBlob], { type: 'audio/*' }))
+        })));
     });
-  }
+    
+    // Filter songs based on playlist
+    if (playlistData) {
+        const playlist = JSON.parse(playlistData);
+        playlistHeader.textContent = playlist.name;
+        songs = allSongs.filter(s => playlist.songs?.includes(s.id));
+        
+        // Reorder if coming from "All Songs" with specific selection
+        if (currentSongData && playlist.id === "all-songs-virtual") {
+            const current = JSON.parse(currentSongData);
+            const idx = songs.findIndex(s => s.id === current.id);
+            if (idx !== -1) songs.unshift(...songs.splice(idx, 1));
+        }
+    } else {
+        playlistHeader.textContent = currentSongData ? "Now Playing" : "All Songs";
+        songs = allSongs;
+    }
+    
+    // Render playlist
+    const list = document.getElementById("playlist-songs");
+    list.innerHTML = songs.length === 0 
+        ? '<li class="playlist-item empty-message"><span class="song-title">No songs in this playlist</span><span class="song-info">Add songs from the home page</span></li>'
+        : songs.map((song, idx) => {
+            const showDeleteBtn = !!playlistData; // Show delete button for both playlists and "All Songs"
+            return `<li class="playlist-item" data-index="${idx}" data-song-id="${song.id}">
+                <div class="song-content">
+                    <span class="song-title">${song.title}</span>
+                    <span class="song-info">${song.duration && !isNaN(song.duration) ? formatTime(song.duration) : ''}</span>
+                </div>
+                ${showDeleteBtn ? '<button class="remove-from-playlist" title="Remove from playlist"><i class="fas fa-times"></i></button>' : ''}
+            </li>`;
+        }).join('');
+    
+    // Event delegation for song items
+    list.onclick = e => {
+        const item = e.target.closest('.playlist-item');
+        if (!item) return;
+        
+        if (e.target.closest('.remove-from-playlist')) {
+            removeSongFromPlaylist(parseFloat(item.dataset.songId)); // Use parseFloat for decimal IDs
+        } else {
+            loadSong(parseInt(item.dataset.index));
+            currentAudio?.play();
+        }
+    };
+    
+    // Auto-play first song if coming from home page
+    if (songs.length > 0 && !currentAudio) {
+        setTimeout(() => {
+            loadSong(0);
+            if (playlistData) {
+                const playlist = JSON.parse(playlistData);
+                if (playlist.id === "all-songs-virtual" || playlist.id === "all-songs-ordered" || currentSongData) {
+                    currentAudio?.play().catch(() => {});
+                }
+            }
+        }, 100);
+    }
+};
 
-  // Next button functionality
-  const nextBtn = document.getElementById("next-btn");
-  if (nextBtn) {
-    nextBtn.addEventListener("click", () => {
-      if (songs.length === 0) return;
-      
-      // Go to next song, or loop to first song if at the end
-      let newIndex = currentSongIndex + 1;
-      if (newIndex >= songs.length) {
-        newIndex = 0;
-      }
-      
-      loadSong(newIndex);
-      if (currentAudio) {
-        currentAudio.play().catch(err => {
-          console.log("Auto-play prevented:", err);
-        });
-      }
-    });
-  }
-
-  // Allow user to seek through the song by clicking on progress bar
-  progressBar.addEventListener("input", () => {
+// Load specific song
+const loadSong = idx => {
+    if (idx < 0 || idx >= songs.length) return;
+    
+    const song = songs[idx];
+    currentSongIndex = idx;
+    
     if (currentAudio) {
-      const seekTime = (progressBar.value / 100) * currentAudio.duration;
-      currentAudio.currentTime = seekTime;
-    }
-  });
-
-  // Volume control
-  volumeBar.addEventListener("input", () => {
-    if (currentAudio) {
-      currentAudio.volume = volumeBar.value / 100;
-    }
-  });
-
-  // Update the progress bar and time display as song plays
-  function updateProgress() {
-    if (currentAudio && !isNaN(currentAudio.duration)) {
-      const progress = (currentAudio.currentTime / currentAudio.duration) * 100;
-      progressBar.value = progress || 0;
-      currentTimeEl.textContent = formatTime(currentAudio.currentTime);
-      totalDurationEl.textContent = formatTime(currentAudio.duration);
-    }
-  }
-
-  // Load a specific song and set up its controls
-  function loadSong(index) {
-    console.log("loadSong() called with index:", index);
-    console.log("Total songs available:", songs.length);
-    
-    if (index < 0 || index >= songs.length) {
-      console.error("Invalid song index:", index);
-      return;
+        currentAudio.pause();
+        currentAudio = null;
     }
     
-    const song = songs[index];
-    console.log("Loading song:", song.title);
-    currentSongIndex = index;
-    
-    // Stop current song if one is playing
-    if (currentAudio) {
-      currentAudio.pause();
-      currentAudio = null;
-    }
-    
-    // Create new audio player for the selected song
     currentAudio = new Audio(song.audioURL);
-    currentAudio.volume = volumeBar.value / 100;
-    
-    // Make audio player available globally for playlist controls
+    currentAudio.volume = document.querySelector(".volume-bar").value / 100;
     window.currentAudio = currentAudio;
     
-    // Update the display with song information
-    trackTitle.textContent = song.title;
-    totalDurationEl.textContent = formatTime(song.duration);
-    currentTimeEl.textContent = "0:00";
-    progressBar.value = 0;
+    document.querySelector(".track-title").textContent = song.title;
+    document.querySelector(".total-duration").textContent = formatTime(song.duration);
+    document.querySelector(".current-time").textContent = "0:00";
+    document.querySelector(".progress-bar").value = 0;
+    document.querySelector(".track-art img").src = "./assets/LOGO.png";
     
-    // Keep the default logo as album art
-    const trackArtImg = document.querySelector(".track-art img");
-    trackArtImg.src = "./assets/LOGO.png";
+    document.querySelectorAll(".playlist-item").forEach((item, i) => 
+        item.classList.toggle("active", i === idx));
     
-    // Highlight the currently playing song in playlist
-    document.querySelectorAll(".playlist-item").forEach((item, i) => {
-      item.classList.toggle("active", i === index);
-    });
+    const playPauseIcon = document.querySelector("#play-pause-btn i");
     
-    // Set up audio event listeners
-    currentAudio.addEventListener("timeupdate", updateProgress);
-    currentAudio.addEventListener("ended", () => {
-      // Auto-play next song when current song ends
-      if (currentSongIndex < songs.length - 1) {
-        loadSong(currentSongIndex + 1);
-        currentAudio.play();
-      } else {
-        // End of playlist - stop playing
-        playPauseIcon.classList.remove("fa-pause");
-        playPauseIcon.classList.add("fa-play");
+    currentAudio.ontimeupdate = () => {
+        if (!isNaN(currentAudio.duration)) {
+            const progress = (currentAudio.currentTime / currentAudio.duration) * 100;
+            document.querySelector(".progress-bar").value = progress || 0;
+            document.querySelector(".current-time").textContent = formatTime(currentAudio.currentTime);
+            document.querySelector(".total-duration").textContent = formatTime(currentAudio.duration);
+        }
+    };
+    
+    currentAudio.onended = () => {
+        if (currentSongIndex < songs.length - 1) {
+            loadSong(currentSongIndex + 1);
+            currentAudio.play();
+        } else {
+            playPauseIcon.classList.replace("fa-pause", "fa-play");
+            isPlaying = false;
+        }
+    };
+    
+    currentAudio.onplay = () => {
+        playPauseIcon.classList.replace("fa-play", "fa-pause");
+        isPlaying = true;
+    };
+    
+    currentAudio.onpause = () => {
+        playPauseIcon.classList.replace("fa-pause", "fa-play");
         isPlaying = false;
-      }
-    });
-    
-    currentAudio.addEventListener("play", () => {
-      playPauseIcon.classList.remove("fa-play");
-      playPauseIcon.classList.add("fa-pause");
-      isPlaying = true;
-    });
-    
-    currentAudio.addEventListener("pause", () => {
-      playPauseIcon.classList.remove("fa-pause");
-      playPauseIcon.classList.add("fa-play");
-      isPlaying = false;
-    });
-  }
+    };
+};
 
-  // Make functions available globally so playlist can use them
-  window.loadSong = loadSong;
-  window.currentAudio = currentAudio;
+// Initialize app
+document.addEventListener("DOMContentLoaded", async () => {
+    db = await initDB();
+    
+    const elements = {
+        playPauseBtn: document.getElementById("play-pause-btn"),
+        playPauseIcon: document.querySelector("#play-pause-btn i"),
+        progressBar: document.querySelector(".progress-bar"),
+        volumeBar: document.querySelector(".volume-bar"),
+        addSongBtn: document.getElementById("addSongBtn"),
+        backToHomeBtn: document.getElementById("backToHome"),
+        audioUpload: document.getElementById("audioUpload"),
+        prevBtn: document.getElementById("prev-btn"),
+        nextBtn: document.getElementById("next-btn")
+    };
+    
+    // Add song handler
+    elements.addSongBtn?.addEventListener("click", () => elements.audioUpload.click());
+    
+    elements.audioUpload?.addEventListener("change", async e => {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        const audio = new Audio(URL.createObjectURL(file));
+        audio.onloadedmetadata = async () => {
+            await addSongToDB({
+                title: file.name.replace(/\.[^/.]+$/, ""),
+                duration: Math.floor(audio.duration) || 0,
+                fileName: file.name,
+                addedAt: new Date()
+            }, file);
+            URL.revokeObjectURL(audio.src);
+        };
+        audio.onerror = () => URL.revokeObjectURL(audio.src);
+    });
+    
+    // Back to home
+    elements.backToHomeBtn?.addEventListener("click", () => {
+        sessionStorage.removeItem('currentPlaylist');
+        window.location.href = 'index.html';
+    });
+    
+    // Play/Pause
+    elements.playPauseBtn.addEventListener("click", () => {
+        if (!currentAudio && songs.length > 0) return loadSong(0);
+        currentAudio?.[isPlaying ? 'pause' : 'play']();
+    });
+    
+    // Previous/Next
+    elements.prevBtn?.addEventListener("click", () => {
+        if (songs.length === 0) return;
+        loadSong((currentSongIndex - 1 + songs.length) % songs.length);
+        currentAudio?.play().catch(() => {});
+    });
+    
+    elements.nextBtn?.addEventListener("click", () => {
+        if (songs.length === 0) return;
+        loadSong((currentSongIndex + 1) % songs.length);
+        currentAudio?.play().catch(() => {});
+    });
+    
+    // Progress bar
+    elements.progressBar.addEventListener("input", () => {
+        if (currentAudio) currentAudio.currentTime = (elements.progressBar.value / 100) * currentAudio.duration;
+    });
+    
+    // Volume
+    elements.volumeBar.addEventListener("input", () => {
+        if (currentAudio) currentAudio.volume = elements.volumeBar.value / 100;
+    });
+    
+    // Load songs
+    loadSongs();
 });
+
