@@ -195,12 +195,11 @@
     color: #b3b3b3;
 }
 
-/* Make sure the Playlist Selection Modal is styled correctly */
 #playlistSelectionModal .modal-content {
     width: 450px;
 }
 
-/* Form Styles for modals - simplified */
+/* Form Styles for modals */
 .form-group {
     margin-bottom: 1.5rem;
 }
@@ -235,7 +234,6 @@
     min-height: 80px;
 }
 
-/* Responsive Design for modals */
 @media (max-width: 480px) {
     .modal-content {
         width: 98%;

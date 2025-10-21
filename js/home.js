@@ -106,40 +106,15 @@ const createSongCard = song => {
     return card;
 };
 
-// Add Song Card
-const createAddSongCard = () => {
-    const card = document.createElement('div');
-    card.className = 'add-song-card';
-    card.innerHTML = '<div class="add-icon"><i class="fas fa-plus"></i></div><span class="add-text">Add Song</span>';
-    card.onclick = () => {
-        const input = document.getElementById('audioUpload');
-        input.click();
-        input.onchange = async e => {
-            for (let file of e.target.files) {
-                if (file.type.startsWith('audio/')) {
-                    const buffer = await file.arrayBuffer();
-                    songs.push({
-                        id: Date.now() + Math.random(),
-                        title: file.name.replace(/\.[^/.]+$/, ""),
-                        audioBlob: new Blob([buffer], { type: file.type }),
-                        duration: 0,
-                        dateAdded: new Date().toISOString()
-                    });
-                }
-            }
-            await DB.save('MusicDB', 'songs', songs);
-            renderSongs();
-            input.value = '';
-        };
-    };
-    return card;
-};
-
 // Render functions
 const renderSongs = () => {
     const grid = document.getElementById('allSongsGrid');
+    const addCard = grid.querySelector('.add-song-card');
+    const fileInput = grid.querySelector('#audioUpload');
     grid.innerHTML = '';
-    grid.appendChild(createAddSongCard());
+    if (addCard) grid.appendChild(addCard);
+    if (fileInput) grid.appendChild(fileInput);
+    
     songs.forEach(song => grid.appendChild(createSongCard(song)));
     const count = document.getElementById('totalSongs');
     if (count) count.textContent = `${songs.length} song${songs.length !== 1 ? 's' : ''}`;
@@ -147,13 +122,9 @@ const renderSongs = () => {
 
 const renderPlaylists = () => {
     const grid = document.getElementById('playlistsGrid');
+    const addCard = grid.querySelector('.add-playlist-card');
     grid.innerHTML = '';
-    
-    const addTile = document.createElement('div');
-    addTile.className = 'playlist-card add-tile';
-    addTile.onclick = () => openModal('createPlaylistModal');
-    addTile.innerHTML = '<i class="fas fa-plus"></i><span>Create Playlist</span>';
-    grid.appendChild(addTile);
+    if (addCard) grid.appendChild(addCard);
     
     const count = document.getElementById('totalPlaylists');
     if (count) count.textContent = `${playlists.length} playlist${playlists.length !== 1 ? 's' : ''}`;
@@ -266,6 +237,28 @@ document.addEventListener('DOMContentLoaded', async () => {
     playlists = await DB.load('TuneBoxPlaylists', 'playlists');
     renderSongs();
     renderPlaylists();
+    
+    // Handle file upload (no click handler needed, label automatically triggers input)
+    const audioInput = document.getElementById('audioUpload');
+    if (audioInput) {
+        audioInput.onchange = async e => {
+            for (let file of e.target.files) {
+                if (file.type.startsWith('audio/')) {
+                    const buffer = await file.arrayBuffer();
+                    songs.push({
+                        id: Date.now() + Math.random(),
+                        title: file.name.replace(/\.[^/.]+$/, ""),
+                        audioBlob: new Blob([buffer], { type: file.type }),
+                        duration: 0,
+                        dateAdded: new Date().toISOString()
+                    });
+                }
+            }
+            await DB.save('MusicDB', 'songs', songs);
+            renderSongs();
+            audioInput.value = '';
+        };
+    }
     
     // Create modals HTML if not exists
     if (!document.getElementById('createPlaylistModal')) {

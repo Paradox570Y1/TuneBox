@@ -7,16 +7,33 @@
     --border-color: #333;
 }
 
-/*Nav Bar*/
-.home-container {
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Poppins', sans-serif;
+    background-color: #121212;
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
     min-height: 100vh;
-    background-color: var(--background-dark);
+    padding: 10px;
+    box-sizing: border-box;
+    background: url("../assets/bg.jpg") no-repeat center center fixed;
+}
+.home-container {
+    height: 100vh;
     color: var(--text-color);
     font-family: 'Poppins', sans-serif;
     padding-top: 70px; 
 }
 
-/* Header Styles */
+/* Navbar */
 .home-header {
     background: linear-gradient(135deg, var(--primary-blue), var(--primary-blue-light));
     padding: 0.75rem 0;
@@ -44,35 +61,22 @@
 }
 
 .header-logo {
-    width: 35px;
-    height: 35px;
-    border-radius: 50%;
-}
-
-.logo-section h1 {
-    font-size: 1.5rem;
-    font-weight: 700;
-    margin: 0;
-    color: var(--text-color);
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-}
-
-/* Navigation Section */
-.nav-section {
-    display: flex;
-    gap: 0.75rem;
+    height: 50px;
+    border-radius: 0%;
 }
 
 .nav-btn {
     background: rgba(255, 255, 255, 0.15);
     border: 1px solid rgba(255, 255, 255, 0.2);
-    color: var(--text-color);
     padding: 0.5rem 1rem;
     border-radius: 20px;
     cursor: pointer;
     font-weight: 500;
     font-size: 0.85rem;
     transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+    text-decoration: none;
+    color: white;
 }
 .nav-btn span {
     margin-left: 5px;
@@ -85,9 +89,7 @@
     border-color: var(--primary-blue);
 }
 
-/* Auth buttons removed - not used in current page */
-
-/* Main Content */
+/* Main Section */
 .home-main {
     width: 100vw;
     max-width: 1400px;
@@ -99,17 +101,13 @@
 .add-playlist-card,
 .add-song-card {
     background: linear-gradient(135deg, #2a2a2a, #1e1e1e);
-    border: 2px dashed var(--primary-blue);
-    padding: 1rem;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     cursor: pointer;
     transition: all 0.3s ease;
-    flex-shrink: 0;
-    aspect-ratio: 1;
-    position: relative;
+
     overflow: hidden;
 }
 
@@ -121,15 +119,6 @@
 .add-song-card {
     border-radius: 10px;
     min-height: 120px;
-}
-
-/* Laptop view - add cards fit in grid */
-@media (min-width: 1024px) {
-    .add-playlist-card,
-    .add-song-card {
-        width: 100%;
-        height: auto;
-    }
 }
 
 .add-playlist-card:hover,
@@ -158,23 +147,6 @@
     transform: scale(1.1);
 }
 
-.add-text {
-    font-size: 0.8rem;
-    font-weight: 600;
-    color: var(--text-secondary);
-    transition: all 0.3s ease;
-    text-align: center;
-}
-
-.add-song-card .add-text {
-    font-size: 0.7rem;
-}
-
-.add-playlist-card:hover .add-text,
-.add-song-card:hover .add-text {
-    color: var(--text-color);
-}
-
 /* Section Styling */
 .playlists-section,
 .songs-section {
@@ -192,7 +164,6 @@
 
 .section-header h2 {
     font-size: 1.8rem;
-    color: var(--text-color);
     display: flex;
     align-items: center;
     gap: 0.75rem;
@@ -212,7 +183,6 @@
 
 .control-btn {
     background: linear-gradient(135deg, var(--primary-blue), var(--primary-blue-light));
-    color: var(--text-color);
     border: none;
     padding: 0.5rem 1rem;
     border-radius: 20px;
@@ -233,44 +203,12 @@
     font-size: 0.9rem;
 }
 
-/* Large Desktop Optimization - Ultra-wide screens */
-@media (min-width: 1600px) {
-    .header-content {
-        max-width: 1800px;
-        padding: 0 3rem;
-    }
-    
-    .home-main {
-        width:100vw;
-        padding: 2.5rem 3rem;
-    }
-    
-    /* Ultra-wide screens can have more columns */
-    .playlists-grid {
-        grid-template-columns: repeat(6, 1fr);
-        gap: 2rem;
-    }
-    
-    .songs-grid {
-        grid-template-columns: repeat(8, 1fr);
-        gap: 1.5rem;
-    }
-}
-
 /* Songs Grid */
 .songs-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
     gap: 0.75rem;
     margin-bottom: 1rem;
-}
-
-/* Laptop view - exactly 7 songs per row */
-@media (min-width: 1024px) {
-    .songs-grid {
-        grid-template-columns: repeat(7, 1fr);
-        gap: 1rem;
-    }
 }
 
 .song-card {
@@ -388,14 +326,6 @@
     margin-bottom: 1rem;
 }
 
-/* Laptop view - exactly 5 playlists per row */
-@media (min-width: 1024px) {
-    .playlists-grid {
-        grid-template-columns: repeat(5, 1fr);
-        gap: 1.5rem;
-    }
-}
-
 .playlist-card {
     background: linear-gradient(135deg, #1e1e1e, #2a2a2a);
     border-radius: 12px;
@@ -415,7 +345,7 @@
 }
 
 .playlist-card:hover {
-    border-color: #4A90E2; /* Blue Border */
+    border-color: #4A90E2;
     transform: translateY(-3px);
     box-shadow: 0 8px 25px rgba(74, 144, 226, 0.2); /* Blue Shadow */
 }
@@ -473,94 +403,6 @@
 
 .playlist-stats i {
     font-size: 0.6rem;
-}
-
-/* Modal styles moved to modal.css */
-
-/* Form Styles moved to modal.css */
-
-/* Button Styles - removed (unused in current implementation) */
-
-/* Mini Player */
-.mini-player {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    background: #1e1e1e;
-    border-top: 1px solid #333;
-    padding: 1rem;
-    z-index: 999;
-}
-
-.mini-player-content {
-    max-width: 1200px;
-    margin: 0 auto;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.mini-track-info {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    flex: 1;
-}
-
-.mini-album-art {
-    width: 50px;
-    height: 50px;
-    border-radius: 8px;
-}
-
-.mini-text {
-    display: flex;
-    flex-direction: column;
-}
-
-.mini-title {
-    font-weight: 600;
-    color: #fff;
-    font-size: 0.9rem;
-}
-
-.mini-duration {
-    color: #b3b3b3;
-    font-size: 0.8rem;
-}
-
-.mini-controls {
-    display: flex;
-    gap: 0.5rem;
-    align-items: center;
-}
-
-.mini-btn {
-    width: 40px;
-    height: 40px;
-    border: none;
-    border-radius: 50%;
-    background: #333;
-    color: #fff;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.3s ease;
-}
-
-.mini-btn.primary {
-    background: #4A90E2; /* Blue Background */
-}
-
-.mini-btn:hover {
-    background: #444;
-    transform: scale(1.1);
-}
-
-.mini-btn.primary:hover {
-    background: #3F80D0; /* Darker Blue */
 }
 
 /* Responsive Design */
@@ -641,14 +483,6 @@
     .add-song-card .add-icon {
         font-size: 1rem;
     }
-    
-    .add-text {
-        font-size: 0.6rem;
-    }
-    
-    .add-song-card .add-text {
-        font-size: 0.55rem;
-    }
     .section-header{
         flex-direction:column;
         align-items:flex-start;
@@ -676,11 +510,8 @@
         width: 30px;
         height: 30px;
     }
-    
-    /* Modal related styles moved to modal.css */
-}
 
-/* Playlist selection styles moved to modal.css */
+}
 
 /* Song Menu Tooltip */
 .song-menu-tooltip {
@@ -715,28 +546,21 @@
 
 /* SweetAlert2 Custom Dark Theme */
 .swal-dark-popup {
-    border: 1px solid #333 !important;
-    border-radius: 12px !important;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5) !important;
-}
-
-.swal2-title, .swal2-html-container, 
-.swal-confirm-btn, .swal-cancel-btn {
-    font-family: 'Poppins', sans-serif !important;
+    border: 1px solid #333 ;
+    border-radius: 12px ;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5) ;
 }
 
 .swal2-title {
-    color: #fff !important;
+    color: #fff ;
 }
 
 .swal2-html-container {
-    color: #b3b3b3 !important;
+    color: #b3b3b3 ;
 }
 
 .swal-confirm-btn, .swal-cancel-btn {
-    font-weight: 600 !important;
-    border-radius: 6px !important;
-    padding: 0.75rem 1.5rem !important;
+    font-weight: 600 ;
+    border-radius: 6px ;
+    padding: 0.75rem 1.5rem ;
 }
-
-/* Cleanup: Removed unused style declarations */
