@@ -283,7 +283,7 @@ const loadSong = idx => {
     document.querySelector(".total-duration").textContent = formatTime(song.duration);
     document.querySelector(".current-time").textContent = "0:00";
     document.querySelector(".progress-bar").value = 0;
-    document.querySelector(".track-art img").src = "./assets/LOGO.png";
+    document.querySelector(".track-art img").src = "./assets/LOGO1.png";
     
     document.querySelectorAll(".playlist-item").forEach((item, i) => 
         item.classList.toggle("active", i === idx));
@@ -356,9 +356,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         audio.onerror = () => URL.revokeObjectURL(audio.src);
     });
     
-    // Back to home
+    // Back to home (keep playlist data so cross buttons remain visible when returning)
     elements.backToHomeBtn?.addEventListener("click", () => {
-        sessionStorage.removeItem('currentPlaylist');
         window.location.href = 'index.html';
     });
     
